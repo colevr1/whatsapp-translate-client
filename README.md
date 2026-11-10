@@ -79,3 +79,7 @@ The app is ad-hoc signed, not notarized (that needs an Apple Developer ID), so m
 - This client uses [Baileys](https://github.com/WhiskeySockets/Baileys), an unofficial WhatsApp Web protocol library. WhatsApp doesn't officially support third-party clients, so use it at your own risk.
 - Environment variables: `PORT` (default 3210), `WA_DATA_DIR` (default `./data`), `TRANSLATE_MODEL` (default `gpt-6-luna`), `MY_LANGUAGE` (default Italian), `THEIR_LANGUAGE` (default French), `CODEX_BIN`, `WA_LOG_LEVEL`.
 - Not affiliated with, endorsed by, or sponsored by WhatsApp, Meta or OpenAI.
+
+## License
+
+[WTFPL](LICENSE): do what the f*ck you want to.

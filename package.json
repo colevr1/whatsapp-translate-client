@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Local WhatsApp client with automatic translation via Codex models",
+  "license": "WTFPL",
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning server/index.js",
     "dev": "node --no-warnings=ExperimentalWarning --watch server/index.js",
