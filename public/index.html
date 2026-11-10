@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WhatsApp Translate</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- Login -->
+  <section id="login" class="login hidden">
+    <div class="login-card">
+      <h1>WhatsApp Translate</h1>
+      <ol>
+        <li>Open WhatsApp on your phone</li>
+        <li>Go to <b>Settings → Linked devices → Link a device</b></li>
+        <li>Point your phone at this QR code</li>
+      </ol>
+      <div class="qr-box">
+        <img id="qr" alt="QR code" class="hidden">
+        <div id="qr-wait" class="spinner"></div>
+      </div>
+      <p id="login-status" class="muted">Connecting to WhatsApp…</p>
+    </div>
+  </section>
+
+  <!-- App -->
+  <main id="app" class="app hidden">
+    <aside class="sidebar">
+      <header class="side-head">
+        <div class="me">
+          <div id="me-avatar" class="avatar"></div>
+          <div>
+            <div id="me-name" class="me-name"></div>
+            <div id="sync-status" class="muted small"></div>
+          </div>
+        </div>
+        <button id="logout" class="icon-btn" title="Log out">⏻</button>
+      </header>
+      <div class="search"><input id="search" type="search" placeholder="Search chats"></div>
+      <ul id="chat-list" class="chat-list"></ul>
+    </aside>
+
+    <section class="conversation">
+      <div id="empty" class="empty">
+        <h2>WhatsApp Translate</h2>
+        <p class="muted">Select a chat. Turn on 🌐 in a chat to translate messages automatically.</p>
+      </div>
+
+      <div id="chat" class="chat hidden">
+        <header class="chat-head">
+          <button id="back" class="icon-btn mobile-only" title="Back">←</button>
+          <div id="chat-avatar" class="avatar"></div>
+          <div class="chat-title">
+            <div id="chat-name"></div>
+            <div id="chat-sub" class="muted small"></div>
+          </div>
+          <div class="tr-bar">
+            <label class="toggle" title="Automatic translation">
+              <input id="tr-enabled" type="checkbox"><span>🌐 Translate</span>
+            </label>
+            <label class="field">Model
+              <select id="tr-model"></select>
+            </label>
+            <label class="field" title="Your language: incoming messages are translated into it">Mine
+              <select id="tr-origin"></select>
+            </label>
+            <span class="arrow">⇄</span>
+            <label class="field" title="Their language: your messages are translated into it">Theirs
+              <select id="tr-dest"></select>
+            </label>
+          </div>
+        </header>
+
+        <div id="messages" class="messages"></div>
+
+        <footer class="composer-wrap">
+          <div id="reply-box" class="reply-box hidden">
+            <div><b>Replying</b> <span id="reply-text"></span></div>
+            <button id="reply-cancel" class="icon-btn small">✕</button>
+          </div>
+          <div id="attach-box" class="attach-box hidden">
+            <img id="attach-thumb" class="hidden" alt="">
+            <span id="attach-name"></span>
+            <button id="attach-cancel" class="icon-btn small">✕</button>
+          </div>
+          <div id="preview" class="preview hidden">
+            <div class="preview-label">Preview — check the translation, then send</div>
+            <div class="preview-bubble">
+              <div id="preview-original" class="preview-original"></div>
+              <div class="translation out">
+                <div class="tr-label" id="preview-lang"></div>
+                <textarea id="preview-text" rows="1"></textarea>
+              </div>
+            </div>
+            <div class="preview-actions">
+              <button id="preview-cancel" class="btn ghost">Edit</button>
+              <button id="preview-send-original" class="btn ghost">Send original</button>
+              <button id="preview-send" class="btn primary">Send translation ➤</button>
+            </div>
+          </div>
+          <div class="composer">
+            <button id="attach-btn" class="icon-btn" title="Attach">📎</button>
+            <input id="file" type="file" class="hidden">
+            <textarea id="input" rows="1" placeholder="Type a message"></textarea>
+            <button id="send" class="icon-btn send" title="Send">➤</button>
+          </div>
+        </footer>
+      </div>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox hidden"><img alt=""></div>
+  <div id="toast" class="toast hidden"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

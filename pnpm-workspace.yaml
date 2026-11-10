@@ -1,0 +1,5 @@
+# Install scripts aren't needed: baileys' only runs a Node version check,
+# and protobufjs' is optional.
+allowBuilds:
+  baileys: false
+  protobufjs: false
