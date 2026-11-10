@@ -8,7 +8,7 @@ A WhatsApp client for your Mac that translates your chats automatically, powered
 
 ## Download
 
-Get the latest `WhatsApp Translate.zip` from **[Releases](../../releases/latest)** (Apple Silicon Macs).
+Download `WhatsApp-Translate-macOS-arm64.zip` from the **[latest release](../../releases/latest)** (Apple Silicon Macs).
 
 1. Unzip it.
 2. Double-click **Setup Codex.command**. macOS blocks it the first time because the app isn't notarized: click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway**. The script then:
