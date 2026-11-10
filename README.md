@@ -26,7 +26,7 @@ Open http://localhost:3210 and scan the QR code from WhatsApp → Settings → L
 
 ### Translation (per chat)
 
-Turn on **🌐 Translate** in a chat's header, then pick:
+Translation turns on automatically the first time you open a chat, using **GPT-6-Luna**, **Italian** (mine) and **French** (theirs). You can change any of these per chat, or switch **🌐 Translate** off, in the chat's header:
 
 - **Model**: any model your Codex install lists (`codex debug models`).
 - **Mine**: your language. Incoming messages get a translation into it, shown below each message.
@@ -34,11 +34,11 @@ Turn on **🌐 Translate** in a chat's header, then pick:
 
 When you press Enter, the translation of your draft shows up as a preview under your original text. You can edit it, then click **Send translation**, or **Send original**. The contact receives the translated text. Your original stays saved locally and appears under the sent message.
 
-Translations are batched and cached in the database, so a chat with many messages costs a single Codex run, and nothing gets translated twice.
+Each message is sent to the model together with the 3 messages before it, so it can resolve references, pronouns and tone. Only the message itself is translated. Translations are batched and cached in the database, so a chat with many messages costs a single Codex run, and nothing gets translated twice.
 
 ## Notes
 
 - The server listens on `127.0.0.1` only, because it has full access to your WhatsApp account.
 - Codex runs with `--ignore-user-config` (so your MCP servers aren't loaded), a read-only sandbox and an empty working directory. The prompt treats messages as untrusted text.
 - This client uses [Baileys](https://github.com/WhiskeySockets/Baileys), an unofficial WhatsApp Web protocol library. WhatsApp doesn't officially support third-party clients, so use it at your own risk.
-- Environment variables: `PORT` (default 3210), `WA_DATA_DIR` (default `./data`), `CODEX_BIN`, `WA_LOG_LEVEL`.
+- Environment variables: `PORT` (default 3210), `WA_DATA_DIR` (default `./data`), `TRANSLATE_MODEL` (default `gpt-6-luna`), `MY_LANGUAGE` (default Italian), `THEIR_LANGUAGE` (default French), `CODEX_BIN`, `WA_LOG_LEVEL`.

@@ -3,10 +3,9 @@ import http from 'node:http'
 import path from 'node:path'
 import { WebSocketServer } from 'ws'
 import { MEDIA_DIR, PUBLIC_DIR } from './paths.js'
-import { getSetting, setSetting } from './db.js'
 import * as store from './store.js'
 import { WhatsApp } from './whatsapp.js'
-import { listModels, translate } from './translate.js'
+import { defaultModel, listModels, translate } from './translate.js'
 
 const PORT = Number(process.env.PORT || 3210)
 const HOST = process.env.HOST || '127.0.0.1' // local only: this server has full access to your WhatsApp
@@ -29,14 +28,29 @@ wss.on('connection', ws => ws.send(JSON.stringify({ type: 'state', state: wa.sta
 
 // ---------- translation settings ----------
 
+// New chats start translated with these (override with env vars).
 function defaults() {
-  return getSetting('defaults', { model: null, originLang: 'English', destLang: 'Spanish' })
+  return {
+    enabled: true,
+    model: defaultModel(),
+    originLang: process.env.MY_LANGUAGE || 'Italian',
+    destLang: process.env.THEIR_LANGUAGE || 'French'
+  }
 }
 
 function effectiveSettings(chatId) {
   const d = defaults()
   const s = store.getChatSettings(chatId)
   return s ? { ...d, ...Object.fromEntries(Object.entries(s).filter(([, v]) => v != null)) } : { ...d, enabled: false }
+}
+
+/** First time a chat is opened, switch translation on with the defaults. */
+function initChatSettings(chatId) {
+  if (store.getChatSettings(chatId)) return
+  const d = defaults()
+  if (!d.model) return // Codex unavailable: leave it off
+  store.setChatSettings(chatId, d)
+  chatsChanged()
 }
 
 const inflight = new Set()
@@ -48,7 +62,8 @@ function ensureTranslations(chatId, limit = 60) {
     const key = `${chatId}|${m.id}|${s.originLang}`
     if (inflight.has(key)) continue
     inflight.add(key)
-    translate(m.text, { model: s.model, lang: s.originLang })
+    const context = store.contextBefore(chatId, m.ts, m.id)
+    translate(m.text, { model: s.model, lang: s.originLang, context })
       .then(text => {
         store.saveTranslation(chatId, m.id, s.originLang, text, s.model)
         broadcast({ type: 'translation', chatId, msgId: m.id, lang: s.originLang, text })
@@ -100,18 +115,13 @@ const route = fn => async (req, res) => {
 
 app.get('/api/state', route(() => wa.state))
 app.get('/api/models', route(() => listModels()))
-app.get('/api/defaults', route(() => defaults()))
-app.put('/api/defaults', route(req => {
-  const { model, originLang, destLang } = req.body
-  setSetting('defaults', { ...defaults(), model, originLang, destLang })
-  return defaults()
-}))
 
 app.get('/api/chats', route(() => store.listChats()))
 
 app.get('/api/chats/:id', route(req => {
   const chat = store.getChat(req.params.id)
   if (!chat) throw new Error('chat not found')
+  initChatSettings(req.params.id)
   return { ...chat, settings: effectiveSettings(req.params.id) }
 }))
 
@@ -131,7 +141,6 @@ app.put('/api/chats/:id/settings', route(req => {
   const chatId = req.params.id
   const { enabled, model, originLang, destLang } = req.body
   store.setChatSettings(chatId, { enabled, model, originLang, destLang })
-  setSetting('defaults', { model, originLang, destLang }) // remember last choice for new chats
   if (enabled) ensureTranslations(chatId)
   chatsChanged()
   return effectiveSettings(chatId)
@@ -145,7 +154,8 @@ app.post('/api/chats/:id/translate', route(async req => {
   if (!s.model || !s.destLang) throw new Error('Pick a model and destination language first')
   const text = String(req.body.text || '').trim()
   if (!text) throw new Error('Nothing to translate')
-  return { text: await translate(text, { model: s.model, lang: s.destLang, urgent: true }), lang: s.destLang }
+  const context = store.contextBefore(req.params.id, Math.floor(Date.now() / 1000))
+  return { text: await translate(text, { model: s.model, lang: s.destLang, urgent: true, context }), lang: s.destLang }
 }))
 
 // Send text. If `original` is given, it is stored locally as the in-my-language version.
@@ -192,7 +202,8 @@ app.post('/api/chats/:id/messages/:msgId/translate', route(async req => {
   const row = store.getMessage(chatId, msgId)
   if (!row?.text) throw new Error('No text to translate')
   if (!s.model || !s.originLang) throw new Error('Pick a model and language first')
-  const text = await translate(row.text, { model: s.model, lang: s.originLang, urgent: true })
+  const context = store.contextBefore(chatId, row.ts, row.id)
+  const text = await translate(row.text, { model: s.model, lang: s.originLang, urgent: true, context })
   store.saveTranslation(chatId, msgId, s.originLang, text, s.model)
   broadcast({ type: 'translation', chatId, msgId, lang: s.originLang, text })
   return { text }

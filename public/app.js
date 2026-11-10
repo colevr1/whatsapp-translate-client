@@ -276,8 +276,8 @@ function renderSettings() {
   const s = S.settings
   $('#tr-enabled').checked = !!s.enabled
   fillSelect($('#tr-model'), S.models, s.model || S.defaultModel)
-  fillSelect($('#tr-origin'), LANGS, s.originLang || 'English')
-  fillSelect($('#tr-dest'), LANGS, s.destLang || 'Spanish')
+  fillSelect($('#tr-origin'), LANGS, s.originLang || 'Italian')
+  fillSelect($('#tr-dest'), LANGS, s.destLang || 'French')
   $('.tr-bar').classList.toggle('off', !s.enabled)
   $('#input').placeholder = s.enabled ? `Message (${s.originLang} → ${s.destLang})` : 'Type a message'
 }

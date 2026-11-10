@@ -374,9 +374,22 @@ export function setChatSettings(chatId, s) {
     .run(chatId, s.enabled ? 1 : 0, s.model || null, s.originLang || null, s.destLang || null)
 }
 
+/** The text messages just before `ts` in a chat, oldest first, as translation context. */
+export function contextBefore(chatId, ts, excludeId = '', limit = 3) {
+  return db.prepare(`SELECT from_me, sender, push_name, text FROM messages
+    WHERE chat_id = ? AND ts <= ? AND id <> ? AND text IS NOT NULL AND TRIM(text) <> ''
+    ORDER BY ts DESC, rowid DESC LIMIT ?`)
+    .all(chatId, ts, excludeId, limit)
+    .reverse()
+    .map(r => ({
+      from: r.from_me ? 'me' : (isJidGroup(chatId) ? (contactName(r.sender) || r.push_name || 'them') : 'them'),
+      text: r.text.length > 500 ? r.text.slice(0, 500) + '…' : r.text
+    }))
+}
+
 /** Incoming text messages that still need translating into `lang`. */
 export function untranslated(chatId, lang, limit = 60) {
-  return db.prepare(`SELECT m.chat_id, m.id, m.text FROM messages m
+  return db.prepare(`SELECT m.chat_id, m.id, m.text, m.ts FROM messages m
     LEFT JOIN translations t ON t.chat_id = m.chat_id AND t.msg_id = m.id AND t.lang = ?
     WHERE m.chat_id = ? AND m.from_me = 0 AND m.text IS NOT NULL AND TRIM(m.text) <> '' AND t.msg_id IS NULL
     ORDER BY m.ts DESC LIMIT ?`).all(lang, chatId, limit)
