@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import makeWASocket, {
   Browsers, DisconnectReason, downloadMediaMessage, fetchLatestBaileysVersion, fetchLatestWaWebVersion,
-  makeCacheableSignalKeyStore, useMultiFileAuthState, isJidGroup, ALL_WA_PATCH_NAMES
+  makeCacheableSignalKeyStore, useMultiFileAuthState, isJidGroup, jidNormalizedUser, ALL_WA_PATCH_NAMES
 } from 'baileys'
 import pino from 'pino'
 import QRCode from 'qrcode'
@@ -38,6 +38,8 @@ export class WhatsApp extends EventEmitter {
 
   async start() {
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR)
+    // after pairing, WhatsApp restarts the connection: claim the data before any sync arrives
+    if (state.creds.me?.id) this.claimAccount(state.creds.me.id)
     // WhatsApp rejects outdated client versions, so prefer the live WA Web version.
     let version
     try { ({ version } = await fetchLatestWaWebVersion({})) } catch {}
@@ -61,9 +63,20 @@ export class WhatsApp extends EventEmitter {
 
     sock.ev.on('creds.update', saveCreds)
 
-    sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+    // One odd event from WhatsApp must never take the app down: log it and move on.
+    const on = (event, handler) => sock.ev.on(event, (...args) => {
+      try {
+        const r = handler(...args)
+        if (r?.catch) r.catch(err => console.error(`[wa] ${event} handler failed:`, err))
+      } catch (err) {
+        console.error(`[wa] ${event} handler failed:`, err)
+      }
+    })
+
+    on('connection.update', async ({ connection, lastDisconnect, qr }) => {
       if (qr) this.setState({ connection: 'qr', qr: await QRCode.toDataURL(qr, { margin: 1, width: 320 }) })
       if (connection === 'open') {
+        this.claimAccount(sock.user.id)
         this.setState({ connection: 'open', qr: null, me: sock.user })
         this.refreshGroups().catch(err => logger.warn({ err }, 'group fetch failed'))
         for (const r of store.recentFailedMedia()) this.queueMedia(r.chat_id, r.id, true)
@@ -89,57 +102,74 @@ export class WhatsApp extends EventEmitter {
       }
     })
 
-    sock.ev.on('messaging-history.set', ({ chats, contacts, messages, lidPnMappings, progress, isLatest }) => {
+    on('messaging-history.set', ({ chats, contacts, messages, lidPnMappings, progress, isLatest }) => {
       tx(() => {
         for (const m of lidPnMappings || []) store.addLidMapping(m.lid, m.pn)
         for (const c of contacts || []) store.upsertContact(c)
         for (const c of chats || []) this.applyChat(c)
       })
-      tx(() => { for (const m of messages || []) this.ingest(m, { history: true }) })
+      tx(() => { for (const m of messages || []) this.safeIngest(m, { history: true }) })
       this.setState({ syncing: !(progress >= 100 || isLatest) })
       this.emit('chats-changed')
       this.emit('sync', { progress: progress ?? null, chats: chats?.length || 0, messages: messages?.length || 0 })
     })
 
-    sock.ev.on('lid-mapping.update', upd => {
+    on('lid-mapping.update', upd => {
       for (const m of [].concat(upd || [])) store.addLidMapping(m.lid, m.pn)
     })
 
-    sock.ev.on('chats.upsert', chats => { for (const c of chats) this.applyChat(c); this.emit('chats-changed') })
-    sock.ev.on('chats.update', chats => { for (const c of chats) this.applyChat(c); this.emit('chats-changed') })
-    sock.ev.on('contacts.upsert', cs => { for (const c of cs) store.upsertContact(c); this.emit('chats-changed') })
-    sock.ev.on('contacts.update', cs => { for (const c of cs) store.upsertContact(c); this.emit('chats-changed') })
-    sock.ev.on('groups.update', gs => {
+    on('chats.upsert', chats => { for (const c of chats) this.applyChat(c); this.emit('chats-changed') })
+    on('chats.update', chats => { for (const c of chats) this.applyChat(c); this.emit('chats-changed') })
+    on('contacts.upsert', cs => { for (const c of cs) store.upsertContact(c); this.emit('chats-changed') })
+    on('contacts.update', cs => { for (const c of cs) store.upsertContact(c); this.emit('chats-changed') })
+    on('groups.update', gs => {
       for (const g of gs) if (g.id && g.subject) store.upsertChat({ id: g.id, name: g.subject })
       this.emit('chats-changed')
     })
-    sock.ev.on('groups.upsert', gs => {
+    on('groups.upsert', gs => {
       for (const g of gs) store.upsertChat({ id: g.id, name: g.subject })
       this.emit('chats-changed')
     })
 
-    sock.ev.on('messages.upsert', ({ messages, type }) => {
-      for (const m of messages) this.ingest(m, { live: type === 'notify' })
+    on('messages.upsert', ({ messages, type }) => {
+      for (const m of messages) this.safeIngest(m, { live: type === 'notify' })
     })
 
-    sock.ev.on('messages.update', updates => {
+    on('messages.update', updates => {
       for (const { key, update } of updates) {
-        const chatId = store.canonical(key.remoteJid)
-        if (update.status != null) {
-          store.updateStatus(chatId, key.id, update.status)
-          this.emit('message-changed', chatId, key.id)
-        }
+        if (update?.status == null || !key?.id) continue
+        // some receipts carry only the message id, not the chat
+        const chatId = this.chatIdFor(key)
+        if (!chatId) continue
+        store.updateStatus(chatId, key.id, update.status)
+        this.emit('message-changed', chatId, key.id)
       }
     })
 
-    sock.ev.on('messages.reaction', reactions => {
+    on('messages.reaction', reactions => {
       for (const { key, reaction } of reactions) {
-        const chatId = store.canonical(key.remoteJid)
-        const sender = reaction.key?.fromMe ? 'me' : store.canonical(reaction.key?.participant || reaction.key?.remoteJid)
+        const chatId = key?.id && this.chatIdFor(key)
+        if (!chatId) continue
+        const sender = reaction.key?.fromMe ? 'me' : (store.canonical(reaction.key?.participant || reaction.key?.remoteJid) || 'unknown')
         store.saveReaction({ chatId, msgId: key.id, sender, emoji: reaction.text })
         this.emit('message-changed', chatId, key.id)
       }
     })
+  }
+
+  /** Wipe local chats and media if a different WhatsApp account than before has linked. */
+  claimAccount(meId) {
+    if (!store.claimAccount(jidNormalizedUser(meId))) return
+    this.mediaQueue = []
+    fs.rmSync(MEDIA_DIR, { recursive: true, force: true })
+    fs.mkdirSync(MEDIA_DIR, { recursive: true })
+    console.log('[wa] a different WhatsApp account linked: removed the previous account\'s local data')
+    this.emit('chats-changed')
+  }
+
+  /** Chat a message key belongs to: from the key, or by looking the message up. */
+  chatIdFor(key) {
+    return (key.remoteJid && store.canonical(key.remoteJid)) || store.findMessageById(key.id)?.chat_id || null
   }
 
   applyChat(c) {
@@ -153,6 +183,15 @@ export class WhatsApp extends EventEmitter {
       archived: c.archived ?? undefined,
       pinned: c.pinned == null ? undefined : !!c.pinned
     })
+  }
+
+  /** ingest() that skips a message it can't store instead of aborting the batch. */
+  safeIngest(m, opts) {
+    try {
+      this.ingest(m, opts)
+    } catch (err) {
+      console.error('[wa] could not store message', m?.key?.id, err)
+    }
   }
 
   ingest(m, { live = false, history = false } = {}) {

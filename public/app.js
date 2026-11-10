@@ -632,7 +632,7 @@ for (const id of ['#tr-enabled', '#tr-model', '#tr-origin', '#tr-dest']) {
   $(id).addEventListener('change', () => saveSettings().catch(err => toast(err.message)))
 }
 $('#logout').onclick = async () => {
-  if (!confirm('Log out of WhatsApp on this client? Locally stored chats are kept.')) return
+  if (!confirm('Log out of WhatsApp on this client?\n\nYour chats stay on this Mac if you link the same account again. Linking a different account deletes them.')) return
   await api('/api/logout', { method: 'POST' }).catch(err => toast(err.message))
 }
 window.addEventListener('focus', () => {

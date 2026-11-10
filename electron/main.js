@@ -10,6 +10,10 @@ const APP_NAME = 'WhatsApp Translate'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 app.setName(APP_NAME)
+
+// Log unexpected errors instead of showing Electron's "Uncaught Exception" crash dialog.
+process.on('uncaughtException', err => console.error('[main] uncaught exception:', err))
+process.on('unhandledRejection', err => console.error('[main] unhandled rejection:', err))
 if (!app.requestSingleInstanceLock()) app.exit(0)
 
 // Apps opened from Finder get a bare PATH (/usr/bin:/bin:...), so `codex` (and the

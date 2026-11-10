@@ -1,7 +1,7 @@
 // Local persistence of chats, contacts and messages, plus helpers to turn
 // Baileys message objects into flat rows.
 import { BufferJSON, normalizeMessageContent, getContentType, jidNormalizedUser, isJidGroup } from 'baileys'
-import { db, tx } from './db.js'
+import { db, tx, getSetting, setSetting } from './db.js'
 
 // ---------- JIDs ----------
 // WhatsApp now addresses many users by an opaque LID (xxx@lid) instead of their
@@ -63,6 +63,27 @@ function mergeChat(from, to) {
       db.prepare('DELETE FROM contacts WHERE id = ?').run(from)
     }
   })
+}
+
+// ---------- account ----------
+
+const ACCOUNT_TABLES = ['chats', 'contacts', 'lid_map', 'messages', 'reactions', 'translations', 'chat_settings']
+
+/**
+ * The local data belongs to one WhatsApp account. When a different account links,
+ * delete the previous account's chats so the two never mix. Returns true if data was wiped.
+ */
+export function claimAccount(accountJid) {
+  const owner = getSetting('account', null)
+  if (owner === accountJid) return false
+  const hadData = !!db.prepare('SELECT 1 FROM chats LIMIT 1').get()
+  const wipe = !!owner && hadData
+  if (wipe) {
+    tx(() => { for (const t of ACCOUNT_TABLES) db.exec(`DELETE FROM ${t}`) })
+    lidCache.clear()
+  }
+  setSetting('account', accountJid)
+  return wipe
 }
 
 // ---------- contacts & chats ----------
@@ -312,6 +333,8 @@ export function setMediaState(chatId, id, state, filePath = null) {
 }
 
 export function updateStatus(chatId, id, status) {
+  status = Number(status)
+  if (!chatId || !id || !Number.isFinite(status)) return
   db.prepare('UPDATE messages SET status = MAX(COALESCE(status, 0), ?) WHERE chat_id = ? AND id = ?').run(status, chatId, id)
 }
 
