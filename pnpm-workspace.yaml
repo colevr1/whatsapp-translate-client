@@ -1,5 +1,14 @@
-# Install scripts aren't needed: baileys' only runs a Node version check,
-# and protobufjs' is optional.
+# Install scripts: Electron's downloads its runtime; baileys' only runs a Node
+# version check, and protobufjs' is optional.
 allowBuilds:
   baileys: false
+  electron: true
   protobufjs: false
+
+# Flat node_modules, so the macOS app bundle can copy dependencies as-is.
+nodeLinker: hoisted
+
+# Install sharp's native binaries for both Apple Silicon and Intel Macs.
+supportedArchitectures:
+  os: [current, darwin]
+  cpu: [current, arm64, x64]

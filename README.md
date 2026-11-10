@@ -16,6 +16,20 @@ npm start
 
 Open http://localhost:3210 and scan the QR code from WhatsApp → Settings → Linked devices.
 
+## Mac app for colleagues
+
+```bash
+npm run dist
+```
+
+This builds `dist/WhatsApp Translate/`, ready to zip and share. It contains:
+
+- `WhatsApp Translate.app`: the desktop app (Electron), Apple Silicon by default. Use `npm run dist -- --arch=x64` for Intel Macs or `--arch=universal` for both.
+- `Setup Codex.command`: installs the Codex CLI if it's missing (OpenAI's official installer, no admin rights needed), opens the browser to sign in, then closes itself. It also clears the "downloaded from the internet" flag on the app.
+- `READ ME FIRST.txt`: setup steps for colleagues.
+
+The app is ad-hoc signed, not notarized (that needs an Apple Developer ID), so macOS asks for confirmation the first time (right-click → Open). The app keeps its data in `~/Library/Application Support/WhatsApp Translate/` and its log in `~/Library/Logs/WhatsApp Translate/`. Run `npm run app` to start the desktop app from source, and `npm run icon` to regenerate the icon from `build/icon.svg`.
+
 ## Features
 
 - WhatsApp login by QR code. The session persists, and the client reconnects on its own.

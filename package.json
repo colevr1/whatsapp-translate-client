@@ -6,13 +6,23 @@
   "description": "Local WhatsApp client with automatic translation via Codex models",
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning server/index.js",
-    "dev": "node --no-warnings=ExperimentalWarning --watch server/index.js"
+    "dev": "node --no-warnings=ExperimentalWarning --watch server/index.js",
+    "app": "electron .",
+    "icon": "node scripts/make-icon.mjs",
+    "dist": "node scripts/package-mac.mjs"
   },
   "dependencies": {
     "baileys": "7.0.0-rc14",
     "express": "^5.3.0",
     "pino": "^10.4.0",
     "qrcode": "^1.5.4",
-    "ws": "^8.22.1"
-  }
+    "ws": "^8.22.1",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "45.2.1"
+  },
+  "productName": "WhatsApp Translate",
+  "main": "electron/main.js"
 }

@@ -7,7 +7,7 @@ import * as store from './store.js'
 import { WhatsApp } from './whatsapp.js'
 import { defaultModel, listModels, translate } from './translate.js'
 
-const PORT = Number(process.env.PORT || 3210)
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3210 // 0 = any free port (desktop app)
 const HOST = process.env.HOST || '127.0.0.1' // local only: this server has full access to your WhatsApp
 
 const app = express()
@@ -213,8 +213,14 @@ app.post('/api/logout', route(() => wa.logout()))
 
 app.get(/^(?!\/api|\/media|\/ws).*/, (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')))
 
-server.listen(PORT, HOST, () => {
-  console.log(`WhatsApp Translate client running at http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`)
+/** Resolves with the port the server is listening on. */
+export const ready = new Promise((resolve, reject) => {
+  server.once('error', reject)
+  server.listen(PORT, HOST, () => {
+    const { port } = server.address()
+    console.log(`WhatsApp Translate client running at http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${port}`)
+    resolve(port)
+  })
 })
 store.reparseUnknown()
 listModels().then(m => console.log(`[translate] ${m.models.length} Codex models available (default: ${m.default})`))

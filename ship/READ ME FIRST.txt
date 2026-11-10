@@ -1,0 +1,34 @@
+WhatsApp Translate
+==================
+
+A WhatsApp client for your Mac that translates your chats automatically.
+
+Setup (once)
+------------
+1. Move "WhatsApp Translate.app" to your Applications folder (optional).
+
+2. Right-click "Setup Codex.command" and choose Open, then click Open again.
+   - It installs the Codex CLI if you don't have it, then opens your browser
+     so you can sign in with your ChatGPT account. The window closes by itself
+     when everything is ready.
+   - If macOS says it "can't verify" the file: open System Settings →
+     Privacy & Security, scroll down, click "Open Anyway", and try again.
+     (This happens because the app isn't from the App Store.)
+
+3. Open WhatsApp Translate (right-click → Open the first time) and scan the QR
+   code with your phone: WhatsApp → Settings → Linked devices → Link a device.
+
+Using it
+--------
+- Opening a chat turns translation on: messages you receive get an Italian
+  translation underneath, and what you type is translated into French.
+  Change the model and the languages per chat in the bar at the top.
+- Press Enter to see the translation of your message, then click
+  "Send translation" (you can edit it first), or "Send original".
+- Your chats, photos and files are stored only on your Mac.
+- Closing the window keeps the app running in the background. Quit with ⌘Q.
+
+Good to know
+------------
+- Translation uses your own ChatGPT/Codex account and its usage limits.
+- This is an unofficial WhatsApp client, so use it at your own risk.
