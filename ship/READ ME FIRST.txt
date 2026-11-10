@@ -5,18 +5,24 @@ A WhatsApp client for your Mac that translates your chats automatically.
 
 Setup (once)
 ------------
-1. Move "WhatsApp Translate.app" to your Applications folder (optional).
+1. (Optional) Drag "WhatsApp Translate.app" into your Applications folder.
 
-2. Right-click "Setup Codex.command" and choose Open, then click Open again.
-   - It installs the Codex CLI if you don't have it, then opens your browser
-     so you can sign in with your ChatGPT account. The window closes by itself
-     when everything is ready.
-   - If macOS says it "can't verify" the file: open System Settings →
-     Privacy & Security, scroll down, click "Open Anyway", and try again.
-     (This happens because the app isn't from the App Store.)
+2. Double-click "Setup Codex.command".
+   macOS will block it the first time, saying it can't verify the file,
+   because it doesn't come from the App Store. To allow it:
+     a. Click "Done" in that message.
+     b. Open System Settings → Privacy & Security, scroll down to
+        "Setup Codex.command was blocked", and click "Open Anyway".
+     c. Enter your Mac password, then click "Open Anyway" once more.
+   You only need to do this once.
 
-3. Open WhatsApp Translate (right-click → Open the first time) and scan the QR
-   code with your phone: WhatsApp → Settings → Linked devices → Link a device.
+   The setup then runs in a Terminal window:
+   - it installs the Codex CLI if you don't have it;
+   - it opens your browser so you can sign in with your ChatGPT account;
+   - it unblocks the app, opens it, and closes the window.
+
+3. In WhatsApp Translate, scan the QR code with your phone:
+   WhatsApp → Settings → Linked devices → Link a device.
 
 Using it
 --------

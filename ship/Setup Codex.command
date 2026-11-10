@@ -6,7 +6,11 @@
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-APP="$HERE/WhatsApp Translate.app"
+# the app may still be next to this script, or already moved to Applications
+APP=""
+for candidate in "$HERE/WhatsApp Translate.app" "/Applications/WhatsApp Translate.app" "$HOME/Applications/WhatsApp Translate.app"; do
+  [ -d "$candidate" ] && { APP="$candidate"; break; }
+done
 ORIG_PATH="$PATH"
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
@@ -27,7 +31,7 @@ clear
 bold "WhatsApp Translate · Codex setup"
 
 # Apps shared via zip get a "downloaded from the internet" flag that makes macOS block them.
-if [ -d "$APP" ]; then
+if [ -n "$APP" ]; then
   xattr -dr com.apple.quarantine "$APP" 2>/dev/null && ok "WhatsApp Translate is allowed to open"
 fi
 
@@ -56,6 +60,6 @@ else
 fi
 
 bold "All set! Opening WhatsApp Translate…"
-[ -d "$APP" ] && open "$APP"
+[ -n "$APP" ] && open "$APP"
 sleep 2
 close_window
